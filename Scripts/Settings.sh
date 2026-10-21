@@ -29,7 +29,8 @@ sed -i "s/hostname='.*'/hostname='$WRT_NAME'/g" $CFG_FILE
 echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config
+#主题配套配置插件（仅当包存在时启用，如argon/aurora有，vantage无）
+find ./package/ ./feeds/ -maxdepth 4 -type d -name "luci-app-$WRT_THEME-config" 2>/dev/null | grep -q . && echo "CONFIG_PACKAGE_luci-app-$WRT_THEME-config=y" >> ./.config || true
 
 #引入私有扩展配置
 if [ -f "$GITHUB_WORKSPACE/Config/PRIVATE.txt" ]; then
@@ -50,4 +51,14 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 		find $DTS_PATH -type f ! -iname '*nowifi*' -exec sed -i 's/ipq\(6018\|8074\).dtsi/ipq\1-nowifi.dtsi/g' {} +
 		echo "qualcommax set up nowifi successfully!"
 	fi
+fi
+
+#固定内核版本为6.12.108
+KERNEL_FILE="./include/kernel-6.12.mk"
+if [ -f "$KERNEL_FILE" ]; then
+	#替换内核小版本号
+	sed -i "s/LINUX_VERSION-6\.12 = \.\([0-9]*\)/LINUX_VERSION-6.12 = .108/" $KERNEL_FILE
+	#替换内核校验值（linux-6.12.108.tar.xz官方sha256）
+	sed -i "s/LINUX_KERNEL_HASH-6\.12\.[0-9]* = .*/LINUX_KERNEL_HASH-6.12.108 = e1d1ea200d22d55c9f5d5fae59e69bb3b494515705fc3390cd54231ee4f4baaf/" $KERNEL_FILE
+	echo "kernel pinned to 6.12.108"
 fi
